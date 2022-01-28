@@ -17,41 +17,30 @@ import (
 	//"io"
 )
 
-// functions
-// generate
-// crl
-// receiver (the one I use with vault)
-
+//Input: Common nane
+//Output: A certificate and private key for the given common name signed by the CA. Also prints the CA cert.
+//Method: GET
+//URL: http://127.0.0.1:8080/generate/<common-name>
 func generate(w http.ResponseWriter, r *http.Request) {
-	//fromPkiDER, _ := ioutil.ReadFile("/Users/s2083076/openssl-test/from-pki.der")
-	//fromPKI, err := x509.ParseCertificate(fromPkiDER)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//jsonFromPKI, _ := json.Marshal(fromPKI)
-	//fmt.Fprintf(w, "%s \n\n", jsonFromPKI)
+
+	fmt.Printf("Generating cert\n")
 
 	input := r.URL.Path[10:]
 	fmt.Fprintln(w, "Hi there, here is a certificate for "+input+" ! \n \n")
 
 	// load the CA cert and priv (here is self signed but can be any CA)
-	certDER, _ := ioutil.ReadFile("/Users/s2083076/openssl-test/val.der")
-	keyDER, _ := ioutil.ReadFile("/Users/s2083076/openssl-test/val-key.der")
+	certDER, _ := ioutil.ReadFile("val.der")
+	keyDER, _ := ioutil.ReadFile("val-key.der")
 
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
 		panic(err)
 	}
-	//fmt.Println(cert.PublicKeyAlgorithm)
 
 	key, err := x509.ParsePKCS1PrivateKey(keyDER)
 	if err != nil {
 		panic(err)
 	}
-	//fmt.Println(key.E)
-
-	//jsonCertCA, _ := json.Marshal(cert)
-	//fmt.Fprintf(w, "%s", jsonCertCA)
 
 	// Build cert template
 	temp := &x509.Certificate{}
@@ -90,16 +79,20 @@ func generate(w http.ResponseWriter, r *http.Request) {
 }
 
 
-
+//Input: RevokedCertsAndCrlLifetime {"RevokedCerts":<[]pkix.RevokedCertificate>,"CrlLifetime":<string>}
+//Output: Signed CRL base64 encoded, der format
+//Method: POST
+//Data: {"RevokedCerts":<[]pkix.RevokedCertificate>,"CrlLifetime":<string>}
+//URL: http://127.0.0.1:8080/val.com/crl
 func crl(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Signing CRL\n")
 
 	// Gather CA cert and key
-	valCertDER, err := ioutil.ReadFile("/Users/s2083076/openssl-test/val2.der")
+	valCertDER, err := ioutil.ReadFile("val.der") //use to be val2.der for testing
 	if err != nil {
 		panic(err)
 	}
-	valKeyDER, err := ioutil.ReadFile("/Users/s2083076/openssl-test/val-key.der")
+	valKeyDER, err := ioutil.ReadFile("val-key.der")
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +105,8 @@ func crl(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	// Process received data
+	// Process received data (revoked cert lit and crl lifetime)
+	// {"RevokedCerts":<[]pkix.RevokedCertificate>,"CrlLifetime":<string>}
 	resp := r.Body
 	//buf := new(strings.Builder)
 	//_, _ = io.Copy(buf, resp)
@@ -125,6 +119,8 @@ func crl(w http.ResponseWriter, r *http.Request) {
 
 	revokedCerts := revokedCertsAndCrlLifetime.RevokedCerts
 	crlLifetime, _ := time.ParseDuration(revokedCertsAndCrlLifetime.CrlLifetime)
+
+	// creating the (signed) CRL
 	crlBytes, _ := valCert.CreateCRL(rand.Reader, valKey, revokedCerts, time.Now(), time.Now().Add(crlLifetime))
 	if err != nil {
 		fmt.Printf("error creating new CRL: %s", err)
@@ -140,16 +136,18 @@ type RevokedCertsAndCrlLifetime struct {
 	CrlLifetime		string
 }
 
-// this is the one I am using with Vault !
+//This is the one I am using with Vault !
+//Input: TemplateAndKey {"Template":<x509.Certificate>,"PublicKey":<rsa.PublicKey>}
+//Output: Signed certificate
 func receiver(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Signing cert \n")
 
 	// Gather CA cert and key
-	valCertDER, err := ioutil.ReadFile("/Users/s2083076/openssl-test/val2.der")
+	valCertDER, err := ioutil.ReadFile("val2.der")
 	if err != nil {
 		panic(err)
 	}
-	valKeyDER, err := ioutil.ReadFile("/Users/s2083076/openssl-test/val-key.der")
+	valKeyDER, err := ioutil.ReadFile("val-key.der")
 	if err != nil {
 		panic(err)
 	}
@@ -206,10 +204,7 @@ type KeyRotationConfig struct {
 	MaxOperations int64
 	Interval      time.Duration
 }
-type Test struct {
-	Aa 	int
-	Bb 	int
-}
+
 
 func main() {
 
@@ -217,6 +212,8 @@ func main() {
 	mux.HandleFunc("/generate/", generate)
 	mux.HandleFunc("/receive", receiver)
 	mux.HandleFunc("/val.com/crl", crl)
+
+	fmt.Printf("Listening on port 8080... \n")
 	err := http.ListenAndServe(":8080", mux)
 	log.Fatal(err)
 }

@@ -1,0 +1,12 @@
+version: "3.7"
+
+# By default, Docker Compose automatically creates a network specifically for the application stack
+services:
+    app: # this name will automatically be the network alias
+        image: golang:1.17-alpine
+        command: go run main.go
+        ports:
+            - 8080:8080
+        working_dir: /go/src/app
+        volumes:
+            - ./app:/go/src/app # bind mount -> mount the source code into the container
