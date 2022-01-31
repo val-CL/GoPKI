@@ -214,7 +214,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/generate/", generate)
 	mux.HandleFunc("/receive", receiver)
-	mux.HandleFunc("/val.com/crl", crl)
+	mux.HandleFunc("/root.com/crl", crl)
 
 	fmt.Printf("Listening on port 8080... \n")
 	err := http.ListenAndServe(":8080", mux)
