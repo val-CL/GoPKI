@@ -17,6 +17,10 @@ import (
 	//"io"
 )
 
+var caCertPath = "root-ca/root.der"
+var caKeyPath = "root-ca/root-key.der"
+
+
 //Input: Common nane
 //Output: A certificate and private key for the given common name signed by the CA. Also prints the CA cert.
 //Method: GET
@@ -29,8 +33,8 @@ func generate(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Hi there, here is a certificate for "+input+" ! \n \n")
 
 	// load the CA cert and priv (here is self signed but can be any CA)
-	certDER, _ := ioutil.ReadFile("val.der")
-	keyDER, _ := ioutil.ReadFile("val-key.der")
+	certDER, _ := ioutil.ReadFile(caCertPath)
+	keyDER, _ := ioutil.ReadFile(caKeyPath)
 
 	cert, err := x509.ParseCertificate(certDER)
 	if err != nil {
@@ -82,17 +86,17 @@ func generate(w http.ResponseWriter, r *http.Request) {
 //Input: RevokedCertsAndCrlLifetime {"RevokedCerts":<[]pkix.RevokedCertificate>,"CrlLifetime":<string>}
 //Output: Signed CRL base64 encoded, der format
 //Method: POST
-//Data: {"RevokedCerts":<[]pkix.RevokedCertificate>,"CrlLifetime":<string>}
+//Data: {"RevokedCerts":[],"CrlLifetime":"72h0m0s"}
 //URL: http://127.0.0.1:8080/val.com/crl
 func crl(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Signing CRL\n")
 
 	// Gather CA cert and key
-	valCertDER, err := ioutil.ReadFile("val.der") //use to be val2.der for testing
+	valCertDER, err := ioutil.ReadFile(caCertPath) //use to be val2.der for testing
 	if err != nil {
 		panic(err)
 	}
-	valKeyDER, err := ioutil.ReadFile("val-key.der")
+	valKeyDER, err := ioutil.ReadFile(caKeyPath)
 	if err != nil {
 		panic(err)
 	}
@@ -143,11 +147,11 @@ func receiver(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Signing cert \n")
 
 	// Gather CA cert and key
-	valCertDER, err := ioutil.ReadFile("val2.der")
+	valCertDER, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
 		panic(err)
 	}
-	valKeyDER, err := ioutil.ReadFile("val-key.der")
+	valKeyDER, err := ioutil.ReadFile(caKeyPath)
 	if err != nil {
 		panic(err)
 	}
@@ -204,7 +208,6 @@ type KeyRotationConfig struct {
 	MaxOperations int64
 	Interval      time.Duration
 }
-
 
 func main() {
 
