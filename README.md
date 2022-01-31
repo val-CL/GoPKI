@@ -72,12 +72,12 @@ curl --request POST \
 
 Usefull OpenSSL commands
 
-# read cert details
-openssl x509 -in client.pem -text
-# read a crl
-openssl crl -in root.crl -text
-# check a certificate against trusted root CA
-openssl verify -verbose -CAfile root.pem client.pem
-# check a certificate against trusted root CA and a CRL
-cat root.pem root.crl >> chain.pem
-openssl verify -verbose -crl_check -CAfile chain.pem client.pem
+read cert details
+$ openssl x509 -in client.pem -text
+read a crl
+$ openssl crl -in root.crl -text
+check a certificate against trusted root CA
+$ openssl verify -verbose -CAfile root.pem client.pem
+check a certificate against trusted root CA and a CRL
+$ cat root.pem root.crl >> chain.pem
+$ openssl verify -verbose -crl_check -CAfile chain.pem client.pem
